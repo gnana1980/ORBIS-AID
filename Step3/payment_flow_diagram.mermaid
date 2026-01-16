@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant User
+    participant Frontend
+    participant Backend
+    participant Razorpay
+    participant Database
+
+    Note over User,Database: SUBSCRIPTION CREATION FLOW
+    
+    User->>Frontend: Select Plan
+    Frontend->>Backend: POST /subscriptions/create
+    Backend->>Database: Check tenant status
+    Backend->>Razorpay: Create Razorpay Plan
+    Razorpay-->>Backend: Plan ID
+    Backend->>Razorpay: Create Subscription
+    Razorpay-->>Backend: Subscription ID + Payment Link
+    Backend->>Database: Save subscription (PENDING)
+    Backend-->>Frontend: Subscription details + Payment URL
+    Frontend-->>User: Redirect to Razorpay Checkout
+    
+    Note over User,Database: PAYMENT FLOW
+    
+    User->>Razorpay: Complete Payment
+    Razorpay->>Backend: Webhook: payment.authorized
+    Backend->>Database: Update subscription (ACTIVE)
+    Backend->>Database: Create payment record
+    Backend->>Database: Generate invoice
+    Razorpay-->>User: Payment Success
+    
+    Note over User,Database: AUTO-RENEWAL FLOW
+    
+    Razorpay->>Backend: Webhook: subscription.charged
+    Backend->>Database: Create new payment
+    Backend->>Database: Generate invoice
+    Backend->>Database: Extend subscription period
+    Backend->>User: Email: Invoice + Receipt
+    
+    Note over User,Database: PAYMENT FAILURE FLOW
+    
+    Razorpay->>Backend: Webhook: payment.failed
+    Backend->>Database: Update subscription (PAST_DUE)
+    Backend->>User: Email: Payment failed notification
+    Backend->>Database: Set grace period (3 days)
