@@ -1,0 +1,945 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+// =====================================================
+// PLATFORM CORE MODELS (Super Admin Level)
+// =====================================================
+
+model Tenant {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  subdomain       String   @unique
+  email           String   @unique
+  phone           String?
+  address         String?
+  registrationNo  String?  // NGO Registration Number
+  panNumber       String?
+  gstNumber       String?
+  status          TenantStatus @default(TRIAL)
+  isActive        Boolean  @default(true)
+  trialEndsAt     DateTime?
+  settings        Json?    // JSON for custom settings
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? // Soft delete
+  
+  // Relations
+  subscriptions   Subscription[]
+  users           User[]
+  projects        Project[]
+  beneficiaries   Beneficiary[]
+  donors          Donor[]
+  donations       Donation[]
+  funds           Fund[]
+  accounts        Account[]
+  journalEntries  JournalEntry[]
+  expenses        Expense[]
+  approvals       Approval[]
+  auditLogs       AuditLog[]
+  usageMetrics    UsageMetric[]
+  complianceDocs  ComplianceDocument[]
+
+  @@index([subdomain])
+  @@index([status])
+  @@schema("public")
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+
+  @@schema("public")
+}
+
+model Plan {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique
+  displayName     String
+  description     String?
+  price           Decimal  @db.Decimal(10, 2)
+  currency        String   @default("INR")
+  interval        BillingInterval @default(MONTHLY)
+  trialDays       Int      @default(14)
+  
+  // Feature Limits
+  features        Json     // JSON for dynamic features
+  maxProjects     Int      @default(5)
+  maxUsers        Int      @default(10)
+  maxBeneficiaries Int     @default(100)
+  maxStorage      Int      @default(1024) // in MB
+  
+  // Feature Flags
+  financeEnabled  Boolean  @default(false)
+  complianceEnabled Boolean @default(false)
+  apiAccess       Boolean  @default(false)
+  customBranding  Boolean  @default(false)
+  
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  subscriptions   Subscription[]
+
+  @@schema("public")
+}
+
+enum BillingInterval {
+  MONTHLY
+  QUARTERLY
+  YEARLY
+
+  @@schema("public")
+}
+
+model Subscription {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  planId          String   @db.Uuid
+  status          SubscriptionStatus @default(ACTIVE)
+  
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAt           DateTime?
+  canceledAt         DateTime?
+  
+  razorpaySubscriptionId String? @unique
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan            Plan     @relation(fields: [planId], references: [id])
+  payments        Payment[]
+  invoices        Invoice[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@schema("public")
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+
+  @@schema("public")
+}
+
+model Payment {
+  id              String   @id @default(uuid()) @db.Uuid
+  subscriptionId  String   @db.Uuid
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("INR")
+  status          PaymentStatus @default(PENDING)
+  
+  razorpayPaymentId  String? @unique
+  razorpayOrderId    String?
+  razorpaySignature  String?
+  
+  paymentMethod   String?
+  paymentDate     DateTime?
+  failureReason   String?
+  
+  metadata        Json?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+  invoice         Invoice?
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@schema("public")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  REFUNDED
+
+  @@schema("public")
+}
+
+model Invoice {
+  id              String   @id @default(uuid()) @db.Uuid
+  subscriptionId  String   @db.Uuid
+  paymentId       String?  @unique @db.Uuid
+  invoiceNumber   String   @unique
+  
+  amount          Decimal  @db.Decimal(10, 2)
+  tax             Decimal  @db.Decimal(10, 2) @default(0)
+  total           Decimal  @db.Decimal(10, 2)
+  currency        String   @default("INR")
+  
+  status          InvoiceStatus @default(DRAFT)
+  dueDate         DateTime
+  paidAt          DateTime?
+  
+  billingPeriodStart DateTime
+  billingPeriodEnd   DateTime
+  
+  pdfUrl          String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  subscription    Subscription @relation(fields: [subscriptionId], references: [id])
+  payment         Payment?     @relation(fields: [paymentId], references: [id])
+
+  @@index([subscriptionId])
+  @@index([invoiceNumber])
+  @@schema("public")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  VOID
+
+  @@schema("public")
+}
+
+model UsageMetric {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  metricType      String   // projects, users, beneficiaries, storage, api_calls
+  value           Int
+  recordedAt      DateTime @default(now())
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([metricType])
+  @@schema("public")
+}
+
+// =====================================================
+// AUTHENTICATION & RBAC MODELS
+// =====================================================
+
+model User {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String?  @db.Uuid // Null for super admin
+  email           String   @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  avatar          String?
+  
+  roleId          String   @db.Uuid
+  
+  isActive        Boolean  @default(true)
+  isSuperAdmin    Boolean  @default(false)
+  lastLoginAt     DateTime?
+  
+  refreshToken    String?
+  resetToken      String?
+  resetTokenExpiry DateTime?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? // Soft delete
+  
+  // Relations
+  tenant          Tenant?  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  role            Role     @relation(fields: [roleId], references: [id])
+  projectsManaged Project[] @relation("ProjectManager")
+  approvals       Approval[]
+  auditLogs       AuditLog[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@schema("public")
+}
+
+model Role {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   // NGO_ADMIN, PROJECT_MANAGER, FINANCE_MANAGER, FIELD_STAFF, DONOR
+  displayName     String
+  description     String?
+  isSystemRole    Boolean  @default(false) // Cannot be deleted
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  users           User[]
+  permissions     RolePermission[]
+
+  @@unique([name])
+  @@schema("public")
+}
+
+model Permission {
+  id              String   @id @default(uuid()) @db.Uuid
+  resource        String   // projects, beneficiaries, donors, finance, etc.
+  action          String   // create, read, update, delete, approve
+  description     String?
+  
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  roles           RolePermission[]
+
+  @@unique([resource, action])
+  @@schema("public")
+}
+
+model RolePermission {
+  id              String   @id @default(uuid()) @db.Uuid
+  roleId          String   @db.Uuid
+  permissionId    String   @db.Uuid
+  
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  role            Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission      Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@schema("public")
+}
+
+// =====================================================
+// PROJECT MANAGEMENT MODELS
+// =====================================================
+
+model Project {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  name            String
+  description     String?
+  code            String   // Unique project code
+  
+  budget          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("INR")
+  
+  startDate       DateTime
+  endDate         DateTime
+  status          ProjectStatus @default(PLANNING)
+  
+  managerId       String?  @db.Uuid
+  location        String?
+  sector          String?  // Education, Health, Livelihood, etc.
+  
+  metadata        Json?    // Custom fields
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? // Soft delete
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  manager         User?    @relation("ProjectManager", fields: [managerId], references: [id])
+  beneficiaries   ProjectBeneficiary[]
+  funds           ProjectFund[]
+  expenses        Expense[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([status])
+  @@schema("public")
+}
+
+enum ProjectStatus {
+  PLANNING
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+
+  @@schema("public")
+}
+
+// =====================================================
+// BENEFICIARY MANAGEMENT MODELS
+// =====================================================
+
+model Beneficiary {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  
+  // Basic Info
+  firstName       String
+  lastName        String
+  fatherName      String?
+  dateOfBirth     DateTime?
+  gender          Gender?
+  
+  // Contact
+  phone           String?
+  email           String?
+  address         String?
+  city            String?
+  state           String?
+  pincode         String?
+  
+  // Identity
+  aadhaarNumber   String?
+  panNumber       String?
+  
+  // Custom Fields (Dynamic Forms)
+  customFields    Json?
+  
+  // Documents
+  photoUrl        String?
+  documents       Json?    // Array of document URLs
+  
+  status          BeneficiaryStatus @default(PENDING)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? // Soft delete
+  
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projects        ProjectBeneficiary[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@schema("public")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+
+  @@schema("public")
+}
+
+enum BeneficiaryStatus {
+  PENDING
+  APPROVED
+  ACTIVE
+  INACTIVE
+  REJECTED
+
+  @@schema("public")
+}
+
+model ProjectBeneficiary {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  beneficiaryId   String   @db.Uuid
+  
+  enrollmentDate  DateTime @default(now())
+  exitDate        DateTime?
+  status          String   @default("ACTIVE")
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  project         Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  beneficiary     Beneficiary  @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, beneficiaryId])
+  @@schema("public")
+}
+
+// =====================================================
+// DONOR & FUND MANAGEMENT MODELS
+// =====================================================
+
+model Donor {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  
+  // Individual or Organization
+  type            DonorType
+  
+  // Individual Fields
+  firstName       String?
+  lastName        String?
+  
+  // Organization Fields
+  organizationName String?
+  
+  // Contact
+  email           String
+  phone           String?
+  address         String?
+  city            String?
+  state           String?
+  country         String   @default("India")
+  pincode         String?
+  
+  // Tax Info
+  panNumber       String?
+  
+  // Preferences
+  isAnonymous     Boolean  @default(false)
+  communicationPreference String? // email, phone, none
+  
+  status          String   @default("ACTIVE")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime? // Soft delete
+  
+  // Relations
+  tenant          Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  donations       Donation[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@schema("public")
+}
+
+enum DonorType {
+  INDIVIDUAL
+  ORGANIZATION
+  CORPORATE
+
+  @@schema("public")
+}
+
+model Donation {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  donorId         String   @db.Uuid
+  
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("INR")
+  donationDate    DateTime @default(now())
+  
+  paymentMethod   String   // Cash, Cheque, Online, Bank Transfer
+  transactionRef  String?
+  
+  // Tax Exemption
+  is80GEligible   Boolean  @default(true)
+  isFCRA          Boolean  @default(false)
+  
+  purpose         String?
+  notes           String?
+  
+  receiptNumber   String   @unique
+  receiptIssued   Boolean  @default(false)
+  receiptUrl      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  donor           Donor  @relation(fields: [donorId], references: [id])
+  funds           Fund[]
+
+  @@index([tenantId])
+  @@index([donorId])
+  @@index([receiptNumber])
+  @@schema("public")
+}
+
+model Fund {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  donationId      String   @db.Uuid
+  
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("INR")
+  
+  fundType        FundType @default(UNRESTRICTED)
+  purpose         String?
+  
+  restrictions    String?  // Specific restrictions on fund usage
+  
+  availableAmount Decimal  @db.Decimal(12, 2) // Unallocated amount
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  donation        Donation      @relation(fields: [donationId], references: [id])
+  projectFunds    ProjectFund[]
+
+  @@index([tenantId])
+  @@index([fundType])
+  @@schema("public")
+}
+
+enum FundType {
+  RESTRICTED
+  UNRESTRICTED
+  FCRA
+
+  @@schema("public")
+}
+
+model ProjectFund {
+  id              String   @id @default(uuid()) @db.Uuid
+  projectId       String   @db.Uuid
+  fundId          String   @db.Uuid
+  
+  allocatedAmount Decimal  @db.Decimal(12, 2)
+  utilizedAmount  Decimal  @db.Decimal(12, 2) @default(0)
+  
+  allocationDate  DateTime @default(now())
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  project         Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fund            Fund    @relation(fields: [fundId], references: [id])
+
+  @@index([projectId])
+  @@index([fundId])
+  @@schema("public")
+}
+
+// =====================================================
+// FINANCE & ACCOUNTING MODELS (Double-Entry)
+// =====================================================
+
+model Account {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  
+  code            String   // Account code (e.g., 1000, 2000)
+  name            String
+  description     String?
+  
+  type            AccountType
+  category        AccountCategory
+  
+  parentAccountId String?  @db.Uuid
+  
+  balance         Decimal  @db.Decimal(15, 2) @default(0)
+  currency        String   @default("INR")
+  
+  isActive        Boolean  @default(true)
+  isSystemAccount Boolean  @default(false) // Cannot be deleted
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  parentAccount   Account?       @relation("AccountHierarchy", fields: [parentAccountId], references: [id])
+  childAccounts   Account[]      @relation("AccountHierarchy")
+  ledgerEntries   LedgerEntry[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([type])
+  @@schema("public")
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+
+  @@schema("public")
+}
+
+enum AccountCategory {
+  // Assets
+  BANK
+  CASH
+  ACCOUNTS_RECEIVABLE
+  INVENTORY
+  FIXED_ASSET
+  
+  // Liabilities
+  ACCOUNTS_PAYABLE
+  LOAN
+  
+  // Equity
+  CAPITAL
+  RETAINED_EARNINGS
+  
+  // Income
+  DONATION_INCOME
+  GRANT_INCOME
+  SERVICE_INCOME
+  OTHER_INCOME
+  
+  // Expenses
+  PROGRAM_EXPENSE
+  ADMIN_EXPENSE
+  SALARY_EXPENSE
+  RENT_EXPENSE
+  UTILITY_EXPENSE
+  OTHER_EXPENSE
+
+  @@schema("public")
+}
+
+model JournalEntry {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  
+  entryNumber     String   // Unique entry number
+  entryDate       DateTime
+  referenceNumber String?
+  description     String
+  
+  status          JournalStatus @default(DRAFT)
+  isPosted        Boolean  @default(false)
+  postedAt        DateTime?
+  
+  createdBy       String?  // User ID
+  approvedBy      String?  // User ID
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ledgerEntries   LedgerEntry[]
+
+  @@unique([tenantId, entryNumber])
+  @@index([tenantId])
+  @@index([entryDate])
+  @@schema("public")
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  VOID
+
+  @@schema("public")
+}
+
+model LedgerEntry {
+  id              String   @id @default(uuid()) @db.Uuid
+  journalEntryId  String   @db.Uuid
+  accountId       String   @db.Uuid
+  
+  entryType       EntryType
+  amount          Decimal  @db.Decimal(15, 2)
+  
+  description     String?
+  
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  journalEntry    JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account         Account      @relation(fields: [accountId], references: [id])
+
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@schema("public")
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+
+  @@schema("public")
+}
+
+model Expense {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  projectId       String?  @db.Uuid
+  
+  expenseNumber   String
+  expenseDate     DateTime
+  
+  category        String   // Travel, Supplies, Salary, etc.
+  description     String
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("INR")
+  
+  // Vendor Info
+  vendorName      String?
+  vendorGST       String?
+  
+  // Payment Info
+  paymentMethod   String?
+  paymentRef      String?
+  paymentDate     DateTime?
+  
+  // Project vs Admin
+  expenseType     ExpenseType @default(PROGRAM)
+  
+  // Approval
+  status          ApprovalStatus @default(PENDING)
+  
+  // Documents
+  receiptUrl      String?
+  documents       Json?
+  
+  journalEntryId  String?  @db.Uuid // Link to accounting entry
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project         Project?  @relation(fields: [projectId], references: [id])
+  approvals       Approval[]
+
+  @@unique([tenantId, expenseNumber])
+  @@index([tenantId])
+  @@index([projectId])
+  @@schema("public")
+}
+
+enum ExpenseType {
+  PROGRAM
+  ADMINISTRATIVE
+
+  @@schema("public")
+}
+
+// =====================================================
+// COMPLIANCE & REGULATORY MODELS
+// =====================================================
+
+model ComplianceDocument {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  
+  documentType    ComplianceType
+  documentNumber  String
+  issueDate       DateTime
+  expiryDate      DateTime?
+  
+  status          String   @default("ACTIVE")
+  
+  documentUrl     String
+  
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([documentType])
+  @@schema("public")
+}
+
+enum ComplianceType {
+  REGISTRATION_12A
+  REGISTRATION_80G
+  FCRA_REGISTRATION
+  CSR_1_FORM
+  GST_REGISTRATION
+  PAN_CARD
+  OTHER
+
+  @@schema("public")
+}
+
+// =====================================================
+// APPROVAL WORKFLOW MODELS
+// =====================================================
+
+model Approval {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @db.Uuid
+  
+  entityType      String   // expense, beneficiary, fund_allocation
+  entityId        String   @db.Uuid
+  
+  level           Int      @default(1)
+  status          ApprovalStatus @default(PENDING)
+  
+  requestedBy     String   @db.Uuid
+  approvedBy      String?  @db.Uuid
+  
+  requestedAt     DateTime @default(now())
+  approvedAt      DateTime?
+  
+  comments        String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  tenant          Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester       User   @relation(fields: [requestedBy], references: [id])
+  expense         Expense? @relation(fields: [entityId], references: [id])
+
+  @@index([tenantId])
+  @@index([entityType])
+  @@index([status])
+  @@schema("public")
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@schema("public")
+}
+
+// =====================================================
+// AUDIT LOG MODEL
+// =====================================================
+
+model AuditLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String?  @db.Uuid // Null for platform-level actions
+  userId          String?  @db.Uuid
+  
+  action          String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  entityType      String   // tenant, user, project, expense, etc.
+  entityId        String?  @db.Uuid
+  
+  changes         Json?    // Before/After values
+  ipAddress       String?
+  userAgent       String?
+  
+  timestamp       DateTime @default(now())
+  
+  // Relations
+  tenant          Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User?   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entityType])
+  @@index([timestamp])
+  @@schema("public")
+}

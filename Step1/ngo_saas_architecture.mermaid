@@ -1,0 +1,84 @@
+graph TB
+    subgraph "Client Layer"
+        A[NGO Admin UI<br/>React + TypeScript]
+        B[Platform Admin UI<br/>React + TypeScript]
+        C[Donor Portal<br/>React + TypeScript]
+    end
+
+    subgraph "API Gateway Layer"
+        D[NestJS API Gateway]
+        E[Authentication Middleware]
+        F[Tenant Isolation Middleware]
+        G[RBAC Middleware]
+    end
+
+    subgraph "Business Logic Layer"
+        H[Auth Service]
+        I[Tenant Service]
+        J[Subscription Service]
+        K[Project Service]
+        L[Beneficiary Service]
+        M[Donor Service]
+        N[Finance Service]
+        O[Compliance Service]
+        P[Approval Workflow Service]
+        Q[Notification Service]
+    end
+
+    subgraph "Data Layer"
+        R[(PostgreSQL<br/>with RLS)]
+        S[Prisma ORM]
+        T[Redis Cache]
+    end
+
+    subgraph "External Services"
+        U[Razorpay API]
+        V[Email Service]
+        W[File Storage<br/>Replit Storage]
+        X[PDF Generator]
+    end
+
+    A --> D
+    B --> D
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G --> H
+    G --> I
+    G --> J
+    G --> K
+    G --> L
+    G --> M
+    G --> N
+    G --> O
+    G --> P
+    G --> Q
+    
+    H --> S
+    I --> S
+    J --> S
+    K --> S
+    L --> S
+    M --> S
+    N --> S
+    O --> S
+    P --> S
+    Q --> S
+    
+    S --> R
+    S --> T
+    
+    J --> U
+    Q --> V
+    L --> W
+    N --> X
+
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#e8f5e9
+    style R fill:#f3e5f5
+    style U fill:#ffebee
+    style V fill:#ffebee
+    style W fill:#ffebee
+    style X fill:#ffebee

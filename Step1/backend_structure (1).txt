@@ -1,0 +1,231 @@
+ngo-saas-backend/
+├── src/
+│   ├── main.ts                          # Application entry point
+│   ├── app.module.ts                    # Root module
+│   │
+│   ├── config/                          # Configuration
+│   │   ├── config.module.ts
+│   │   ├── config.service.ts
+│   │   ├── database.config.ts
+│   │   └── jwt.config.ts
+│   │
+│   ├── common/                          # Shared utilities
+│   │   ├── decorators/
+│   │   │   ├── tenant.decorator.ts      # Extract tenant from request
+│   │   │   ├── roles.decorator.ts       # Role-based access
+│   │   │   └── public.decorator.ts      # Skip auth
+│   │   ├── guards/
+│   │   │   ├── jwt-auth.guard.ts
+│   │   │   ├── tenant.guard.ts
+│   │   │   ├── roles.guard.ts
+│   │   │   └── super-admin.guard.ts
+│   │   ├── middleware/
+│   │   │   └── tenant-context.middleware.ts
+│   │   ├── interceptors/
+│   │   │   ├── tenant-filter.interceptor.ts
+│   │   │   └── logging.interceptor.ts
+│   │   ├── filters/
+│   │   │   └── http-exception.filter.ts
+│   │   ├── pipes/
+│   │   │   └── validation.pipe.ts
+│   │   ├── enums/
+│   │   │   ├── subscription-status.enum.ts
+│   │   │   ├── payment-status.enum.ts
+│   │   │   ├── project-status.enum.ts
+│   │   │   ├── approval-status.enum.ts
+│   │   │   └── account-type.enum.ts
+│   │   └── utils/
+│   │       ├── date.util.ts
+│   │       └── currency.util.ts
+│   │
+│   ├── prisma/                          # Prisma client wrapper
+│   │   ├── prisma.module.ts
+│   │   └── prisma.service.ts
+│   │
+│   ├── modules/
+│   │   ├── auth/                        # Authentication
+│   │   │   ├── auth.module.ts
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── strategies/
+│   │   │   │   ├── jwt.strategy.ts
+│   │   │   │   └── jwt-refresh.strategy.ts
+│   │   │   └── dto/
+│   │   │       ├── login.dto.ts
+│   │   │       ├── register.dto.ts
+│   │   │       └── refresh-token.dto.ts
+│   │   │
+│   │   ├── tenants/                     # Tenant Management
+│   │   │   ├── tenants.module.ts
+│   │   │   ├── tenants.controller.ts
+│   │   │   ├── tenants.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-tenant.dto.ts
+│   │   │       └── update-tenant.dto.ts
+│   │   │
+│   │   ├── plans/                       # Subscription Plans
+│   │   │   ├── plans.module.ts
+│   │   │   ├── plans.controller.ts
+│   │   │   ├── plans.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-plan.dto.ts
+│   │   │       └── update-plan.dto.ts
+│   │   │
+│   │   ├── subscriptions/               # Subscription Management
+│   │   │   ├── subscriptions.module.ts
+│   │   │   ├── subscriptions.controller.ts
+│   │   │   ├── subscriptions.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-subscription.dto.ts
+│   │   │       └── update-subscription.dto.ts
+│   │   │
+│   │   ├── payments/                    # Payment Processing
+│   │   │   ├── payments.module.ts
+│   │   │   ├── payments.controller.ts
+│   │   │   ├── payments.service.ts
+│   │   │   ├── razorpay.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-payment.dto.ts
+│   │   │       └── razorpay-webhook.dto.ts
+│   │   │
+│   │   ├── users/                       # User Management
+│   │   │   ├── users.module.ts
+│   │   │   ├── users.controller.ts
+│   │   │   ├── users.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-user.dto.ts
+│   │   │       └── update-user.dto.ts
+│   │   │
+│   │   ├── roles/                       # Role & Permission Management
+│   │   │   ├── roles.module.ts
+│   │   │   ├── roles.controller.ts
+│   │   │   ├── roles.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-role.dto.ts
+│   │   │       └── assign-permission.dto.ts
+│   │   │
+│   │   ├── projects/                    # Project Management
+│   │   │   ├── projects.module.ts
+│   │   │   ├── projects.controller.ts
+│   │   │   ├── projects.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-project.dto.ts
+│   │   │       └── update-project.dto.ts
+│   │   │
+│   │   ├── beneficiaries/               # Beneficiary Management
+│   │   │   ├── beneficiaries.module.ts
+│   │   │   ├── beneficiaries.controller.ts
+│   │   │   ├── beneficiaries.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-beneficiary.dto.ts
+│   │   │       └── update-beneficiary.dto.ts
+│   │   │
+│   │   ├── donors/                      # Donor Management
+│   │   │   ├── donors.module.ts
+│   │   │   ├── donors.controller.ts
+│   │   │   ├── donors.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-donor.dto.ts
+│   │   │       └── create-donation.dto.ts
+│   │   │
+│   │   ├── funds/                       # Fund Management
+│   │   │   ├── funds.module.ts
+│   │   │   ├── funds.controller.ts
+│   │   │   ├── funds.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-fund.dto.ts
+│   │   │       └── allocate-fund.dto.ts
+│   │   │
+│   │   ├── finance/                     # Finance & Accounting
+│   │   │   ├── finance.module.ts
+│   │   │   ├── accounts/
+│   │   │   │   ├── accounts.controller.ts
+│   │   │   │   ├── accounts.service.ts
+│   │   │   │   └── dto/
+│   │   │   ├── journal/
+│   │   │   │   ├── journal.controller.ts
+│   │   │   │   ├── journal.service.ts
+│   │   │   │   └── dto/
+│   │   │   ├── ledger/
+│   │   │   │   ├── ledger.controller.ts
+│   │   │   │   ├── ledger.service.ts
+│   │   │   │   └── dto/
+│   │   │   └── expenses/
+│   │   │       ├── expenses.controller.ts
+│   │   │       ├── expenses.service.ts
+│   │   │       └── dto/
+│   │   │
+│   │   ├── compliance/                  # Compliance Management
+│   │   │   ├── compliance.module.ts
+│   │   │   ├── compliance.controller.ts
+│   │   │   ├── compliance.service.ts
+│   │   │   └── dto/
+│   │   │       ├── fcra-report.dto.ts
+│   │   │       └── csr-report.dto.ts
+│   │   │
+│   │   ├── approvals/                   # Approval Workflows
+│   │   │   ├── approvals.module.ts
+│   │   │   ├── approvals.controller.ts
+│   │   │   ├── approvals.service.ts
+│   │   │   └── dto/
+│   │   │       ├── create-approval.dto.ts
+│   │   │       └── process-approval.dto.ts
+│   │   │
+│   │   ├── reports/                     # Reports & Analytics
+│   │   │   ├── reports.module.ts
+│   │   │   ├── reports.controller.ts
+│   │   │   ├── reports.service.ts
+│   │   │   ├── pdf.service.ts
+│   │   │   └── excel.service.ts
+│   │   │
+│   │   ├── notifications/               # Notification Service
+│   │   │   ├── notifications.module.ts
+│   │   │   ├── notifications.service.ts
+│   │   │   └── email.service.ts
+│   │   │
+│   │   ├── storage/                     # File Storage
+│   │   │   ├── storage.module.ts
+│   │   │   ├── storage.controller.ts
+│   │   │   ├── storage.service.ts
+│   │   │   └── replit-storage.service.ts
+│   │   │
+│   │   ├── audit/                       # Audit Logs
+│   │   │   ├── audit.module.ts
+│   │   │   ├── audit.service.ts
+│   │   │   └── dto/
+│   │   │       └── audit-log.dto.ts
+│   │   │
+│   │   └── platform/                    # Platform Admin (Super Admin)
+│   │       ├── platform.module.ts
+│   │       ├── platform.controller.ts
+│   │       ├── platform.service.ts
+│   │       └── dto/
+│   │           ├── analytics.dto.ts
+│   │           └── impersonate.dto.ts
+│   │
+│   └── database/
+│       └── seeds/                       # Database Seeders
+│           ├── seed.ts
+│           ├── plans.seed.ts
+│           ├── roles.seed.ts
+│           └── super-admin.seed.ts
+│
+├── prisma/
+│   ├── schema.prisma                    # Prisma Schema
+│   ├── migrations/                      # Database Migrations
+│   └── seed.ts                          # Seed script
+│
+├── test/                                # Tests
+│   ├── unit/
+│   ├── integration/
+│   └── e2e/
+│
+├── .env.example                         # Environment variables template
+├── .env                                 # Environment variables (gitignored)
+├── .gitignore
+├── tsconfig.json                        # TypeScript config
+├── nest-cli.json                        # NestJS CLI config
+├── package.json                         # Dependencies
+├── Dockerfile                           # Docker configuration
+├── docker-compose.yml                   # Docker Compose
+└── README.md                            # Documentation

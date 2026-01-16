@@ -1,0 +1,105 @@
+erDiagram
+    TENANTS ||--o{ SUBSCRIPTIONS : has
+    TENANTS ||--o{ USERS : has
+    TENANTS ||--o{ PROJECTS : has
+    TENANTS ||--o{ BENEFICIARIES : has
+    TENANTS ||--o{ DONORS : has
+    TENANTS ||--o{ ACCOUNTS : has
+    
+    PLANS ||--o{ SUBSCRIPTIONS : "subscribed to"
+    
+    SUBSCRIPTIONS ||--o{ PAYMENTS : has
+    SUBSCRIPTIONS ||--o{ INVOICES : generates
+    
+    USERS ||--o{ ROLES : has
+    ROLES ||--o{ PERMISSIONS : has
+    
+    PROJECTS ||--o{ PROJECT_FUNDS : allocates
+    PROJECTS ||--o{ PROJECT_BENEFICIARIES : enrolls
+    PROJECTS ||--o{ EXPENSES : incurs
+    
+    DONORS ||--o{ DONATIONS : makes
+    DONATIONS ||--o{ FUNDS : creates
+    
+    FUNDS ||--o{ PROJECT_FUNDS : "allocated to"
+    
+    ACCOUNTS ||--o{ JOURNAL_ENTRIES : records
+    JOURNAL_ENTRIES ||--o{ LEDGER_ENTRIES : contains
+    
+    EXPENSES ||--o{ APPROVALS : requires
+    
+    TENANTS {
+        uuid id PK
+        string name
+        string subdomain UK
+        string status
+        timestamp created_at
+        boolean is_active
+    }
+    
+    PLANS {
+        uuid id PK
+        string name
+        decimal price
+        string interval
+        json features
+        int max_projects
+        int max_users
+        boolean finance_enabled
+    }
+    
+    SUBSCRIPTIONS {
+        uuid id PK
+        uuid tenant_id FK
+        uuid plan_id FK
+        string status
+        timestamp trial_ends_at
+        timestamp current_period_end
+    }
+    
+    USERS {
+        uuid id PK
+        uuid tenant_id FK
+        string email UK
+        string password_hash
+        uuid role_id FK
+        boolean is_active
+    }
+    
+    PROJECTS {
+        uuid id PK
+        uuid tenant_id FK
+        string name
+        decimal budget
+        date start_date
+        date end_date
+        string status
+    }
+    
+    ACCOUNTS {
+        uuid id PK
+        uuid tenant_id FK
+        string code UK
+        string name
+        string type
+        string category
+        decimal balance
+    }
+    
+    JOURNAL_ENTRIES {
+        uuid id PK
+        uuid tenant_id FK
+        date entry_date
+        string reference
+        string description
+        string status
+        boolean is_posted
+    }
+    
+    LEDGER_ENTRIES {
+        uuid id PK
+        uuid journal_entry_id FK
+        uuid account_id FK
+        string entry_type
+        decimal amount
+    }

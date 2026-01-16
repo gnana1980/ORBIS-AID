@@ -1,0 +1,196 @@
+ngo-saas-frontend/
+├── public/
+│   ├── index.html
+│   ├── favicon.ico
+│   └── assets/
+│       └── images/
+│
+├── src/
+│   ├── main.tsx                         # Application entry point
+│   ├── App.tsx                          # Root component
+│   ├── index.css                        # Global styles (Tailwind)
+│   │
+│   ├── config/                          # Configuration
+│   │   ├── api.config.ts                # API endpoints
+│   │   └── constants.ts                 # App constants
+│   │
+│   ├── types/                           # TypeScript types
+│   │   ├── auth.types.ts
+│   │   ├── tenant.types.ts
+│   │   ├── project.types.ts
+│   │   ├── beneficiary.types.ts
+│   │   ├── donor.types.ts
+│   │   ├── finance.types.ts
+│   │   └── index.ts
+│   │
+│   ├── hooks/                           # Custom React hooks
+│   │   ├── useAuth.ts
+│   │   ├── useTenant.ts
+│   │   ├── usePermissions.ts
+│   │   └── useApi.ts
+│   │
+│   ├── context/                         # React Context
+│   │   ├── AuthContext.tsx
+│   │   ├── TenantContext.tsx
+│   │   └── ThemeContext.tsx
+│   │
+│   ├── services/                        # API Services
+│   │   ├── api.service.ts               # Base API client
+│   │   ├── auth.service.ts
+│   │   ├── tenant.service.ts
+│   │   ├── project.service.ts
+│   │   ├── beneficiary.service.ts
+│   │   ├── donor.service.ts
+│   │   ├── finance.service.ts
+│   │   ├── subscription.service.ts
+│   │   └── platform.service.ts
+│   │
+│   ├── utils/                           # Utility functions
+│   │   ├── token.util.ts
+│   │   ├── date.util.ts
+│   │   ├── currency.util.ts
+│   │   └── validation.util.ts
+│   │
+│   ├── components/                      # Reusable components
+│   │   ├── common/
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   ├── Select.tsx
+│   │   │   ├── Modal.tsx
+│   │   │   ├── Table.tsx
+│   │   │   ├── Card.tsx
+│   │   │   ├── Badge.tsx
+│   │   │   ├── Loader.tsx
+│   │   │   ├── Alert.tsx
+│   │   │   └── Pagination.tsx
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── Header.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   ├── Footer.tsx
+│   │   │   ├── MainLayout.tsx
+│   │   │   └── AuthLayout.tsx
+│   │   │
+│   │   ├── guards/
+│   │   │   ├── ProtectedRoute.tsx
+│   │   │   ├── RoleGuard.tsx
+│   │   │   └── SuperAdminGuard.tsx
+│   │   │
+│   │   ├── charts/
+│   │   │   ├── LineChart.tsx
+│   │   │   ├── BarChart.tsx
+│   │   │   ├── PieChart.tsx
+│   │   │   └── DoughnutChart.tsx
+│   │   │
+│   │   └── forms/
+│   │       ├── FormInput.tsx
+│   │       ├── FormSelect.tsx
+│   │       ├── FormTextarea.tsx
+│   │       ├── FormDatePicker.tsx
+│   │       └── FormFileUpload.tsx
+│   │
+│   ├── pages/                           # Page components
+│   │   ├── auth/
+│   │   │   ├── Login.tsx
+│   │   │   ├── Register.tsx
+│   │   │   ├── ForgotPassword.tsx
+│   │   │   └── ResetPassword.tsx
+│   │   │
+│   │   ├── onboarding/
+│   │   │   ├── TenantOnboarding.tsx
+│   │   │   ├── PlanSelection.tsx
+│   │   │   └── PaymentSetup.tsx
+│   │   │
+│   │   ├── ngo/                         # NGO Dashboard
+│   │   │   ├── Dashboard.tsx
+│   │   │   │
+│   │   │   ├── projects/
+│   │   │   │   ├── ProjectList.tsx
+│   │   │   │   ├── ProjectDetails.tsx
+│   │   │   │   ├── CreateProject.tsx
+│   │   │   │   └── EditProject.tsx
+│   │   │   │
+│   │   │   ├── beneficiaries/
+│   │   │   │   ├── BeneficiaryList.tsx
+│   │   │   │   ├── BeneficiaryDetails.tsx
+│   │   │   │   ├── CreateBeneficiary.tsx
+│   │   │   │   └── EnrollBeneficiary.tsx
+│   │   │   │
+│   │   │   ├── donors/
+│   │   │   │   ├── DonorList.tsx
+│   │   │   │   ├── DonorDetails.tsx
+│   │   │   │   ├── CreateDonor.tsx
+│   │   │   │   └── RecordDonation.tsx
+│   │   │   │
+│   │   │   ├── finance/
+│   │   │   │   ├── FinanceDashboard.tsx
+│   │   │   │   ├── ChartOfAccounts.tsx
+│   │   │   │   ├── JournalEntries.tsx
+│   │   │   │   ├── Ledger.tsx
+│   │   │   │   ├── Expenses.tsx
+│   │   │   │   ├── BankAccounts.tsx
+│   │   │   │   └── BudgetVsActual.tsx
+│   │   │   │
+│   │   │   ├── compliance/
+│   │   │   │   ├── ComplianceDashboard.tsx
+│   │   │   │   ├── FCRAReporting.tsx
+│   │   │   │   ├── CSRReporting.tsx
+│   │   │   │   └── TaxCertificates.tsx
+│   │   │   │
+│   │   │   ├── reports/
+│   │   │   │   ├── ReportList.tsx
+│   │   │   │   ├── UtilizationCertificate.tsx
+│   │   │   │   ├── ProjectFinancial.tsx
+│   │   │   │   ├── DonorWise.tsx
+│   │   │   │   └── MonthlyStatement.tsx
+│   │   │   │
+│   │   │   ├── approvals/
+│   │   │   │   ├── PendingApprovals.tsx
+│   │   │   │   └── ApprovalHistory.tsx
+│   │   │   │
+│   │   │   ├── settings/
+│   │   │   │   ├── OrganizationSettings.tsx
+│   │   │   │   ├── UserManagement.tsx
+│   │   │   │   ├── RolesPermissions.tsx
+│   │   │   │   └── SubscriptionSettings.tsx
+│   │   │   │
+│   │   │   └── users/
+│   │   │       ├── UserList.tsx
+│   │   │       ├── CreateUser.tsx
+│   │   │       └── EditUser.tsx
+│   │   │
+│   │   ├── platform/                    # Platform Admin Dashboard
+│   │   │   ├── PlatformDashboard.tsx
+│   │   │   ├── TenantManagement.tsx
+│   │   │   ├── TenantDetails.tsx
+│   │   │   ├── PlanManagement.tsx
+│   │   │   ├── RevenueAnalytics.tsx
+│   │   │   ├── UsageMetrics.tsx
+│   │   │   ├── SystemAuditLogs.tsx
+│   │   │   └── FailedPayments.tsx
+│   │   │
+│   │   └── donor/                       # Donor Portal
+│   │       ├── DonorDashboard.tsx
+│   │       ├── MyDonations.tsx
+│   │       ├── ProjectImpact.tsx
+│   │       └── Certificates.tsx
+│   │
+│   ├── routes/                          # Route configuration
+│   │   ├── index.tsx
+│   │   ├── ngo.routes.tsx
+│   │   ├── platform.routes.tsx
+│   │   └── donor.routes.tsx
+│   │
+│   └── styles/                          # Additional styles
+│       └── custom.css
+│
+├── .env.example                         # Environment variables template
+├── .env                                 # Environment variables (gitignored)
+├── .gitignore
+├── tsconfig.json                        # TypeScript config
+├── vite.config.ts                       # Vite config
+├── tailwind.config.js                   # Tailwind CSS config
+├── postcss.config.js                    # PostCSS config
+├── package.json                         # Dependencies
+├── Dockerfile                           # Docker configuration
+└── README.md                            # Documentation

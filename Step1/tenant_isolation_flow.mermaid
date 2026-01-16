@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant User
+    participant API
+    participant AuthMiddleware
+    participant TenantMiddleware
+    participant RBACMiddleware
+    participant Service
+    participant PostgreSQL
+
+    User->>API: HTTP Request + JWT Token
+    API->>AuthMiddleware: Validate Token
+    AuthMiddleware->>AuthMiddleware: Decode JWT<br/>(Extract user_id, tenant_id, role)
+    
+    alt Super Admin
+        AuthMiddleware->>API: Set context: isSuperAdmin=true
+    else Regular User
+        AuthMiddleware->>TenantMiddleware: Pass tenant_id
+        TenantMiddleware->>TenantMiddleware: Set Tenant Context
+        TenantMiddleware->>RBACMiddleware: Verify Role Permissions
+        RBACMiddleware->>RBACMiddleware: Check Role vs Resource
+    end
+    
+    RBACMiddleware->>Service: Execute Business Logic
+    Service->>PostgreSQL: Query with tenant_id filter<br/>+ RLS enabled
+    PostgreSQL->>PostgreSQL: Row-Level Security Check
+    PostgreSQL->>Service: Return filtered data
+    Service->>API: Response
+    API->>User: JSON Response

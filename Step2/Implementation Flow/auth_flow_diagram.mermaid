@@ -1,0 +1,43 @@
+sequenceDiagram
+    participant Client
+    participant API
+    participant AuthController
+    participant AuthService
+    participant JWTStrategy
+    participant TenantMiddleware
+    participant RBACGuard
+    participant Database
+
+    Note over Client,Database: LOGIN FLOW
+    Client->>API: POST /auth/login<br/>{email, password}
+    API->>AuthController: login()
+    AuthController->>AuthService: validateUser()
+    AuthService->>Database: findUser(email)
+    Database-->>AuthService: User + Tenant
+    AuthService->>AuthService: verifyPassword()
+    
+    alt Valid Credentials
+        AuthService->>AuthService: generateTokens()
+        AuthService-->>AuthController: {accessToken, refreshToken}
+        AuthController-->>Client: 200 OK + Tokens
+    else Invalid Credentials
+        AuthService-->>Client: 401 Unauthorized
+    end
+
+    Note over Client,Database: PROTECTED REQUEST FLOW
+    Client->>API: GET /projects<br/>Authorization: Bearer {token}
+    API->>JWTStrategy: validateToken()
+    JWTStrategy->>Database: findUser(userId)
+    Database-->>JWTStrategy: User + Role + Tenant
+    JWTStrategy->>TenantMiddleware: setTenantContext()
+    
+    alt Super Admin
+        TenantMiddleware->>RBACGuard: isSuperAdmin=true
+        RBACGuard->>Database: Query (No tenant filter)
+    else Regular User
+        TenantMiddleware->>RBACGuard: tenantId={id}
+        RBACGuard->>RBACGuard: checkPermissions()
+        RBACGuard->>Database: Query (With tenant filter)
+    end
+    
+    Database-->>Client: 200 OK + Data

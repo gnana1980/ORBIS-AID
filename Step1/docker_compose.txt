@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ngo_saas_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ngo_user
+      POSTGRES_PASSWORD: ngo_password_change_this
+      POSTGRES_DB: ngo_saas_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - ngo_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ngo_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: ngo_saas_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ngo_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API
+  backend:
+    build:
+      context: ./ngo-saas-backend
+      dockerfile: Dockerfile
+    container_name: ngo_saas_backend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      DATABASE_URL: postgresql://ngo_user:ngo_password_change_this@postgres:5432/ngo_saas_db?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - ./ngo-saas-backend:/app
+      - /app/node_modules
+      - backend_uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ngo_network
+    command: npm run start:dev
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./ngo-saas-frontend
+      dockerfile: Dockerfile
+    container_name: ngo_saas_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+    volumes:
+      - ./ngo-saas-frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - ngo_network
+    command: npm run dev -- --host
+
+  # Nginx Reverse Proxy (Production)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: ngo_saas_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf
+  #     - ./ssl:/etc/nginx/ssl
+  #   depends_on:
+  #     - backend
+  #     - frontend
+  #   networks:
+  #     - ngo_network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+networks:
+  ngo_network:
+    driver: bridge
